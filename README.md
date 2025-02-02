@@ -2,6 +2,13 @@
 
 ## Outline
 
+## Using GitHub Copilot for Daily Workflows
+
+## What is GitHub Copilot?
+
+GitHub Copilot is an AI-powered code completion tool developed by GitHub in collaboration with OpenAI. It assists developers by suggesting code snippets, functions, and even entire classes based on the context of the code being written. It leverages machine learning models trained on a vast amount of open-source code to provide relevant and accurate suggestions, thereby improving productivity and reducing the time spent on routine coding tasks.
+
+
 ### Laying the Foundation
 - [Using GitHub Copilot for Daily Workflows](#using-github-copilot-for-daily-workflows)
 - [Chat-Powered Development](#chat-powered-development)
@@ -27,7 +34,6 @@
 - [Contributing to External Projects](#contributing-to-external-projects)
   - [Strategies for Working with Less Context](#strategies-for-working-with-less-context)
 
-## Using GitHub Copilot for Daily Workflows
 
 ## Chat-Powered Development
 
@@ -64,3 +70,6 @@
 ## Contributing to External Projects
 
 ### Strategies for Working with Less Context
+
+Example 
+https://github.com/github/gh-copilot?tab=readme-ov-file
