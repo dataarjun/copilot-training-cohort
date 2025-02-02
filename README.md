@@ -74,5 +74,6 @@ GitHub Copilot is an AI-powered code completion tool developed by GitHub in coll
 
 GHiHub CLI Example
 
-[Example ](https://cli.github.com/manual/gh)
-https://github.com/github/gh-copilot?tab=readme-ov-file
+[Example](https://cli.github.com/manual/gh)
+
+[GitHub Copilot](https://github.com/github/gh-copilot?tab=readme-ov-file)
