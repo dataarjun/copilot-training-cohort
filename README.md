@@ -1,6 +1,4 @@
-# copilot-training-cohort
-
-# copilot-training-cohort
+# Github Copilot-Training Cohort
 
 ## Outline
 
