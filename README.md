@@ -77,3 +77,5 @@ GHiHub CLI Example
 [Example](https://cli.github.com/manual/gh)
 
 [GitHub Copilot](https://github.com/github/gh-copilot?tab=readme-ov-file)
+
+Thank you!
