@@ -78,4 +78,4 @@ GHiHub CLI Example
 
 [GitHub Copilot](https://github.com/github/gh-copilot?tab=readme-ov-file)
 
-Thank you!
+Thank you! :)
