@@ -1,0 +1,18 @@
+{
+  "name": "herokuapp-selenium-tests",
+  "version": "1.0.0",
+  "description": "Selenium automation tests for the website https://the-internet.herokuapp.com",
+  "scripts": {
+    "test": "mocha src/tests/**/*.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "csv-parser": "^3.0.0",
+    "selenium-webdriver": "^4.0.0"
+  },
+  "devDependencies": {
+    "chai": "^4.3.4",
+    "mocha": "^9.0.0"
+  }
+}
