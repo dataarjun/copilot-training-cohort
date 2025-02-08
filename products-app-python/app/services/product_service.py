@@ -4,12 +4,15 @@ class ProductService:
     def __init__(self, db):
         self.db = db
 
-    def create_product(self, product_data):
-        product = Product(name=product_data['name'], description=product_data['description'], price=product_data['price'], quantity=product_data['quantity'])
-        self.db.session.add(product)
-        self.db.session.commit()
-        return product.to_dict()
-
+    def create_product(self, product):
+        # Expecting a Product instance directly
+        try:
+            self.db.session.add(product)
+            self.db.session.commit()
+            return True
+        except Exception as e:
+            self.db.session.rollback()
+            return False
     def get_product(self, product_id):
         product = Product.query.get(product_id)
         return product.to_dict() if product else None

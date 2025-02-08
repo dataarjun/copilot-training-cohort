@@ -55,6 +55,7 @@ python app/main.py
 
 2. The application will be running at `http://localhost:5000`.
 
+
 ## API Endpoints
 
 The following REST endpoints are available for the product entity:
@@ -64,6 +65,21 @@ The following REST endpoints are available for the product entity:
 - `POST /products`: Create a new product
 - `PUT /products/{id}`: Update an existing product
 - `DELETE /products/{id}`: Delete a product
+
+## Testing with Postman
+
+To test the API endpoints using Postman, follow these optional steps:
+
+1. Download and install Postman from [here](https://www.postman.com/downloads/) or use the [Postman web version](https://www.postman.com/).
+
+2. Open Postman and import the `Copilot.postman_collection.json` file:
+
+    - Click on the `Import` button in the top left corner.
+    - Select the `Copilot.postman_collection.json` file from your file system.
+
+3. Once imported, you will see a collection named `Copilot` in your Postman workspace. You can now use the predefined requests to test the API endpoints.
+
+Alternatively, you can use the Postman web version and import the collection directly from the URL if it's hosted online.
 
 ## Testing
 
