@@ -8,6 +8,7 @@ from datetime import datetime
 from enum import Enum
 import sqlite3
 import can  # requires python-can package
+from fuel_optimization import integrate_fuel_optimization
 
 # Set up logging
 logging.basicConfig(
@@ -19,6 +20,44 @@ logging.basicConfig(
     ]
 )
 logger = logging.getLogger("tractor_monitor")
+
+# Add this function before the main classes:
+def calculate_field_efficiency(area_covered, quality_factor, time_spent, theoretical_width):
+    """
+    Calculate agricultural field efficiency.
+    
+    Efficiency = (area covered × quality factor) ÷ (time × theoretical width)
+    
+    Parameters:
+        area_covered (float): Area covered in hectares or acres
+        quality_factor (float): Quality factor between 0 and 1
+                               (1 being perfect quality, 0 being no quality)
+        time_spent (float): Time spent in hours
+        theoretical_width (float): Theoretical working width in meters or feet
+    
+    Returns:
+        float: Field efficiency as a decimal (multiply by 100 for percentage)
+        
+    Raises:
+        ValueError: If input parameters are invalid
+    """
+    # Input validation
+    if area_covered <= 0:
+        raise ValueError("Area covered must be positive")
+    
+    if not 0 <= quality_factor <= 1:
+        raise ValueError("Quality factor must be between 0 and 1")
+        
+    if time_spent <= 0:
+        raise ValueError("Time spent must be positive")
+        
+    if theoretical_width <= 0:
+        raise ValueError("Theoretical width must be positive")
+    
+    # Calculate field efficiency
+    efficiency = (area_covered * quality_factor) / (time_spent * theoretical_width)
+    
+    return efficiency
 
 # ==========================================
 # 1. CAN Bus Data Ingestion Module
@@ -713,6 +752,109 @@ class ConnectivityManager:
 
 
 # ==========================================
+# 5. Weather Data Integration
+# ==========================================
+
+class WeatherDataService:
+    """Service to retrieve and integrate weather data into tractor monitoring"""
+    
+    def __init__(self, update_interval=600):  # 10 minutes
+        self.update_interval = update_interval
+        self.running = False
+        self.weather_data = {
+            "temperature": 20.0,  # Celsius
+            "humidity": 60.0,     # Percent
+            "wind_speed": 5.0,    # km/h
+            "precipitation": 0.0, # mm
+            "last_updated": 0
+        }
+        self.forecast = []
+    
+    def start(self):
+        """Start weather data service"""
+        if self.running:
+            return
+        
+        self.running = True
+        self.weather_thread = threading.Thread(target=self._weather_update_loop)
+        self.weather_thread.daemon = True
+        self.weather_thread.start()
+        logger.info("Weather data service started")
+    
+    def _weather_update_loop(self):
+        """Periodically update weather data"""
+        while self.running:
+            now = time.time()
+            if now - self.weather_data["last_updated"] >= self.update_interval:
+                self._update_weather_data()
+                self.weather_data["last_updated"] = now
+            
+            time.sleep(60)  # Check every minute
+    
+    def _update_weather_data(self):
+        """Update current weather data"""
+        try:
+            # In a real system, this would call a weather API
+            # Here we just simulate weather data
+            
+            # Add some variation to simulate changing weather
+            self.weather_data["temperature"] = 20.0 + random.uniform(-5.0, 5.0)
+            self.weather_data["humidity"] = 60.0 + random.uniform(-20.0, 20.0)
+            self.weather_data["wind_speed"] = 5.0 + random.uniform(-3.0, 8.0)
+            
+            # Occasionally add precipitation
+            if random.random() < 0.2:  # 20% chance of precipitation
+                self.weather_data["precipitation"] = random.uniform(0.1, 5.0)
+            else:
+                self.weather_data["precipitation"] = 0.0
+                
+            logger.debug(f"Updated weather data: {self.weather_data}")
+        except Exception as e:
+            logger.error(f"Error updating weather data: {e}")
+    
+    def get_current_weather(self):
+        """Get current weather data"""
+        return dict(self.weather_data)
+    
+    def get_work_condition_score(self):
+        """Calculate a work condition score based on weather conditions"""
+        # Higher score means better working conditions (0-100)
+        score = 100
+        
+        # Reduce score for poor working conditions
+        
+        # Temperature factor (optimal range 15-25°C)
+        temp = self.weather_data["temperature"]
+        if temp < 5 or temp > 35:
+            score -= 30  # Very cold or very hot
+        elif temp < 10 or temp > 30:
+            score -= 15  # Somewhat uncomfortable
+        
+        # Precipitation factor
+        precip = self.weather_data["precipitation"]
+        if precip > 0:
+            score -= min(50, precip * 10)  # Heavy rain severely impacts work
+        
+        # Wind factor
+        wind = self.weather_data["wind_speed"]
+        if wind > 30:
+            score -= 40  # Very windy
+        elif wind > 20:
+            score -= 20  # Moderately windy
+        elif wind > 10:
+            score -= 5   # Slightly windy
+        
+        return max(0, score)
+    
+    def stop(self):
+        """Stop weather data service"""
+        self.running = False
+        if hasattr(self, 'weather_thread'):
+            self.weather_thread.join(timeout=2)
+        logger.info("Weather data service stopped")
+
+
+# ==========================================
 # Main System Integration
 # ==========================================
 
@@ -724,6 +866,7 @@ class TractorMonitoringSystem:
         self.can_reader = CANBusReader()
         self.processor = TelemetryProcessor(self.can_reader)
         self.alert_manager = AlertManager(self.processor)
+        self.weather_service = WeatherDataService()  # Add weather service
         
         # Register example alert handler
         self.alert_manager.register_handler(self._alert_handler)
@@ -742,6 +885,7 @@ class TractorMonitoringSystem:
         self.can_reader.start_reading()
         self.processor.start_processing()
         self.alert_manager.start_monitoring()
+        self.weather_service.start()  # Start weather service
         logger.info("Tractor monitoring system started")
     
     def stop(self):
@@ -749,6 +893,7 @@ class TractorMonitoringSystem:
         self.alert_manager.stop()
         self.processor.stop()
         self.can_reader.stop()
+        self.weather_service.stop()  # Stop weather service
         logger.info("Tractor monitoring system stopped")
     
     def get_system_status(self):
@@ -773,6 +918,7 @@ class TractorMonitoringSystem:
         """Generate a comprehensive efficiency report"""
         metrics = self.processor.get_current_metrics()
         alerts = self.alert_manager.get_alert_history()
+        weather = self.weather_service.get_current_weather()
         
         # Get recent critical alerts
         critical_alerts = [a for a in alerts if a["level"] == AlertLevel.CRITICAL][-5:]
@@ -787,18 +933,25 @@ class TractorMonitoringSystem:
                 "idle_time_hours": metrics["idle_time"] / 3600,
                 "idle_percentage": (metrics["idle_time"] / (metrics["working_time"] + metrics["idle_time"])) * 100 if metrics["working_time"] + metrics["idle_time"] > 0 else 0
             },
+            "weather_conditions": {
+                "temperature": weather["temperature"],
+                "humidity": weather["humidity"],
+                "wind_speed": weather["wind_speed"],
+                "precipitation": weather["precipitation"],
+                "work_condition_score": self.weather_service.get_work_condition_score()
+            },
             "alert_summary": {
                 "total_alerts": sum(self.alert_manager.get_alert_counts().values()),
                 "critical_alerts": len(critical_alerts),
                 "recent_critical": [a["message"] for a in critical_alerts]
             },
-            "recommendations": self._generate_recommendations(metrics)
+            "recommendations": self._generate_recommendations(metrics, weather)
         }
         
         return report
     
-    def _generate_recommendations(self, metrics):
-        """Generate operational recommendations based on metrics"""
+    def _generate_recommendations(self, metrics, weather=None):
+        """Generate operational recommendations based on metrics and weather"""
         recommendations = []
         
         # Efficiency recommendations
@@ -813,6 +966,25 @@ class TractorMonitoringSystem:
         if metrics.get("fuel_efficiency", 0) < 0.5:  # Less than 0.5 ha/L
             recommendations.append("Fuel efficiency is below optimal levels. Consider reducing engine RPM when possible.")
         
+        # Weather-based recommendations
+        if weather:
+            # Temperature recommendations
+            if weather["temperature"] > 30:
+                recommendations.append("High temperature detected. Consider scheduling work during cooler parts of the day.")
+            
+            # Precipitation recommendations
+            if weather["precipitation"] > 1.0:
+                recommendations.append("Current precipitation may affect soil conditions. Monitor implement depth closely.")
+            
+            # Wind recommendations
+            if weather["wind_speed"] > 20:
+                recommendations.append("High winds may affect spraying operations. Consider postponing or using drift-reducing nozzles.")
+                
+            # Work condition score
+            condition_score = self.weather_service.get_work_condition_score()
+            if condition_score < 50:
+                recommendations.append(f"Poor working conditions (score: {condition_score}/100). Consider adjusting operations accordingly.")
+        
         return recommendations
 
 
@@ -820,6 +992,10 @@ class TractorMonitoringSystem:
 if __name__ == "__main__":
     # Start the monitoring system
     tractor_system = TractorMonitoringSystem()
+    
+    # Enable fuel optimization
+    tractor_system = integrate_fuel_optimization(tractor_system)
+    
     tractor_system.start()
     
     try:
@@ -849,6 +1025,16 @@ if __name__ == "__main__":
                 print(f"Area covered: {report['field_metrics']['area_covered']:.2f} hectares")
                 print(f"Field efficiency: {report['field_metrics']['field_efficiency']:.2f}")
                 print(f"Idle percentage: {report['field_metrics']['idle_percentage']:.1f}%")
+                
+                # Add fuel optimization display
+                if 'fuel_optimization' in report:
+                    fuel_opt = report['fuel_optimization']
+                    print("\nFuel Optimization:")
+                    print(f"Total fuel saved: {fuel_opt['fuel_saved_liters']:.2f} liters")
+                    print(f"CO2 reduction: {fuel_opt['co2_reduction_kg']:.2f} kg")
+                    
+                    if fuel_opt['current_recommendation']:
+                        print(f"Current recommendation: {fuel_opt['current_recommendation']['message']}")
                 
                 if report['recommendations']:
                     print("\nRecommendations:")
