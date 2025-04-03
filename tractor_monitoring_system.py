@@ -272,6 +272,7 @@ class TelemetryProcessor:
             "start_time": None,
             "last_timestamp": None
         }
+        self._last_rpm = 0
     
     def start_processing(self):
         """Start the telemetry processing pipeline"""
@@ -337,17 +338,34 @@ class TelemetryProcessor:
         if data_type == "engine":
             # Process engine data
             if "rpm" in data and "load_percent" in data:
-                # Calculate estimated fuel consumption (simplified model)
-                fuel_rate = (data["rpm"] * data["load_percent"]) / 10000.0  # Liters per hour
+                # Calculate estimated fuel consumption (improved model)
+                rpm = data["rpm"]
+                load = data["load_percent"]
+                
+                # More sophisticated fuel model
+                if rpm < 1000:
+                    fuel_factor = 0.05
+                elif rpm < 1800:
+                    fuel_factor = 0.08
+                else:
+                    fuel_factor = 0.12
+                    
+                fuel_rate = (rpm * load * fuel_factor) / 10000.0  # Liters per hour
                 processed["fuel_rate"] = fuel_rate
                 
-                # Engine health check
+                # Engine health check with more parameters
                 if data.get("temperature", 0) > 95:  # Celsius
                     processed["alert"] = "engine_overheating"
                     processed["alert_level"] = AlertLevel.WARNING
                     if data.get("temperature", 0) > 105:
                         processed["alert_level"] = AlertLevel.CRITICAL
                 
+                # New: Check for irregular RPM fluctuations
+                if hasattr(self, '_last_rpm') and abs(rpm - self._last_rpm) > 500 and self._last_rpm > 0:
+                    processed["alert"] = "irregular_rpm_fluctuation"
+                    processed["alert_level"] = AlertLevel.WARNING
+                self._last_rpm = rpm
+        
         elif data_type == "hydraulic":
             # Process hydraulic system data
             if data.get("pressure", 0) > 180:  # Bar
@@ -530,6 +548,7 @@ class AlertManager:
             "high_hydraulic_pressure": f"High hydraulic pressure: {data.get('pressure')} bar",
             "hydraulic_overheating": f"Hydraulic oil overheating: {data.get('oil_temp')}°C",
             "high_rpm_stationary": f"High RPM while stationary: {data.get('rpm')} RPM",
+            "irregular_rpm_fluctuation": f"Irregular RPM fluctuation detected: {data.get('rpm')} RPM",
             # Add more alert types here
         }
         
@@ -749,6 +768,52 @@ class TractorMonitoringSystem:
         }
         
         return status
+    
+    def generate_efficiency_report(self):
+        """Generate a comprehensive efficiency report"""
+        metrics = self.processor.get_current_metrics()
+        alerts = self.alert_manager.get_alert_history()
+        
+        # Get recent critical alerts
+        critical_alerts = [a for a in alerts if a["level"] == AlertLevel.CRITICAL][-5:]
+        
+        report = {
+            "report_time": datetime.now().isoformat(),
+            "field_metrics": {
+                "area_covered": metrics["area_covered"],
+                "field_efficiency": metrics["field_efficiency"],
+                "fuel_efficiency": metrics["fuel_efficiency"],
+                "working_time_hours": metrics["working_time"] / 3600,
+                "idle_time_hours": metrics["idle_time"] / 3600,
+                "idle_percentage": (metrics["idle_time"] / (metrics["working_time"] + metrics["idle_time"])) * 100 if metrics["working_time"] + metrics["idle_time"] > 0 else 0
+            },
+            "alert_summary": {
+                "total_alerts": sum(self.alert_manager.get_alert_counts().values()),
+                "critical_alerts": len(critical_alerts),
+                "recent_critical": [a["message"] for a in critical_alerts]
+            },
+            "recommendations": self._generate_recommendations(metrics)
+        }
+        
+        return report
+    
+    def _generate_recommendations(self, metrics):
+        """Generate operational recommendations based on metrics"""
+        recommendations = []
+        
+        # Efficiency recommendations
+        if metrics["field_efficiency"] < 0.7:
+            recommendations.append("Field efficiency below target. Consider adjusting implement width or speed.")
+        
+        # Idle time recommendations
+        if metrics["idle_time"] > metrics["working_time"] * 0.2:  # More than 20% idle time
+            recommendations.append("High idle time detected. Review field operations to minimize non-productive time.")
+        
+        # Fuel efficiency recommendations
+        if metrics.get("fuel_efficiency", 0) < 0.5:  # Less than 0.5 ha/L
+            recommendations.append("Fuel efficiency is below optimal levels. Consider reducing engine RPM when possible.")
+        
+        return recommendations
 
 
 # Example usage and integration with field efficiency calculator
@@ -760,9 +825,12 @@ if __name__ == "__main__":
     try:
         # Run for sample period
         print("Tractor monitoring system running. Press Ctrl+C to stop.")
+        report_counter = 0
         while True:
             # Every 10 seconds, print system status
             time.sleep(10)
+            report_counter += 1
+            
             status = tractor_system.get_system_status()
             
             print("\nSystem Status:")
@@ -772,6 +840,21 @@ if __name__ == "__main__":
             print(f"Alerts: {status['alerts']['info']} info, "
                   f"{status['alerts']['warning']} warnings, "
                   f"{status['alerts']['critical']} critical")
+            
+            # Generate efficiency report every 3rd cycle (30 seconds)
+            if report_counter % 3 == 0:
+                report = tractor_system.generate_efficiency_report()
+                print("\n==== EFFICIENCY REPORT ====")
+                print(f"Time: {report['report_time']}")
+                print(f"Area covered: {report['field_metrics']['area_covered']:.2f} hectares")
+                print(f"Field efficiency: {report['field_metrics']['field_efficiency']:.2f}")
+                print(f"Idle percentage: {report['field_metrics']['idle_percentage']:.1f}%")
+                
+                if report['recommendations']:
+                    print("\nRecommendations:")
+                    for rec in report['recommendations']:
+                        print(f"- {rec}")
+                print("===========================")
     
     except KeyboardInterrupt:
         print("\nShutting down monitoring system...")
