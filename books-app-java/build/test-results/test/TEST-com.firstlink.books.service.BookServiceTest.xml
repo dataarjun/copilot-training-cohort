@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.firstlink.books.service.BookServiceTest" tests="9" skipped="0" failures="0" errors="0" timestamp="2024-06-01T04:54:22" hostname="WINDOWS-IIHKOEE" time="6.096">
+  <properties/>
+  <testcase name="Should create Excel file with no data when no books exist" classname="com.firstlink.books.service.BookServiceTest" time="5.767"/>
+  <testcase name="Should return books by title and author when they exist" classname="com.firstlink.books.service.BookServiceTest" time="0.029"/>
+  <testcase name="testGetAllBooks()" classname="com.firstlink.books.service.BookServiceTest" time="0.06"/>
+  <testcase name="testUpdateBook()" classname="com.firstlink.books.service.BookServiceTest" time="0.008"/>
+  <testcase name="testGetBookById()" classname="com.firstlink.books.service.BookServiceTest" time="0.008"/>
+  <testcase name="Should create Excel file with correct data when books exist" classname="com.firstlink.books.service.BookServiceTest" time="0.162"/>
+  <testcase name="testCreateBook()" classname="com.firstlink.books.service.BookServiceTest" time="0.007"/>
+  <testcase name="Should return no books by title and author when they do not exist" classname="com.firstlink.books.service.BookServiceTest" time="0.021"/>
+  <testcase name="testDeleteBook()" classname="com.firstlink.books.service.BookServiceTest" time="0.005"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>
